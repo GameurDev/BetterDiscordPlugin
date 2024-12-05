@@ -1,5 +1,5 @@
 /**
- * @name ServerListScrolling
+ * @name ServerListScroll
  * @version 1.0.0
  * @description Permet de faire défiler la liste des serveurs avec la molette de la souris.
  * @author VotreNom
