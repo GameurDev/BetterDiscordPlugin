@@ -1,9 +1,9 @@
 /**
  * @name ChatAI
  * @author VotreNom
- * @description Plugin BetterDiscord pour intégrer une IA de chat (comme ChatGPT).
- * @version 1.0.1
- * @source https://votre-repo-ou-lien-github
+ * @description Plugin BetterDiscord pour intégrer une IA de chat (comme ChatGPT), avec configuration persistante de la clé API.
+ * @version 1.0.3
+ * @source https://github.com/GameurDev/BetterDiscordPlugin
  */
 
 module.exports = class ChatAI {
@@ -12,22 +12,24 @@ module.exports = class ChatAI {
             info: {
                 name: "ChatAI",
                 authors: [{ name: "VotreNom" }],
-                version: "1.0.1",
+                version: "1.0.3",
                 description: "Plugin pour discuter avec une IA directement dans Discord.",
             },
         };
-        this.apiKey = "VOTRE_API_KEY"; // Remplacez par votre clé API.
+        this.pluginName = "ChatAI";
+        this.defaultKeyMessage = "⚠️ Vous devez configurer une clé API avant d'utiliser ChatAI. Cliquez sur l'icône du plugin dans les paramètres pour la configurer.";
     }
 
     start() {
-        // Vérifie si la clé API a été configurée
-        if (this.apiKey === "VOTRE_API_KEY") {
+        const storedApiKey = BdApi.Data.load(this.pluginName, "apiKey");
+        if (!storedApiKey) {
             BdApi.alert(
                 "Configuration requise",
-                "⚠️ Vous devez configurer une clé API avant d'utiliser ChatAI. Modifiez la variable `apiKey` dans le fichier du plugin avec votre clé API OpenAI."
+                this.defaultKeyMessage
             );
         } else {
-            BdApi.showToast("ChatAI Plugin activé !", { type: "info" });
+            this.apiKey = storedApiKey;
+            BdApi.showToast("ChatAI Plugin activé avec votre clé API !", { type: "info" });
             this.injectChatBox();
         }
     }
@@ -69,8 +71,9 @@ module.exports = class ChatAI {
     }
 
     async queryAI(query) {
-        if (this.apiKey === "VOTRE_API_KEY") {
-            return "⚠️ La clé API n'est pas configurée. Veuillez modifier le plugin avec une clé API valide.";
+        const apiKey = BdApi.Data.load(this.pluginName, "apiKey");
+        if (!apiKey) {
+            return this.defaultKeyMessage;
         }
 
         const url = "https://api.openai.com/v1/completions";
@@ -80,7 +83,7 @@ module.exports = class ChatAI {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${this.apiKey}`,
+                    Authorization: `Bearer ${apiKey}`,
                 },
                 body: JSON.stringify({
                     model: "text-davinci-003",
@@ -95,5 +98,44 @@ module.exports = class ChatAI {
             console.error("Erreur lors de l'appel à l'API OpenAI :", error);
             return "❌ Une erreur s'est produite lors de la requête à l'API.";
         }
+    }
+
+    getSettingsPanel() {
+        const apiKey = BdApi.Data.load(this.pluginName, "apiKey") || "";
+
+        const wrapper = document.createElement("div");
+        wrapper.style.padding = "10px";
+
+        const label = document.createElement("label");
+        label.textContent = "Clé API OpenAI :";
+        label.style.display = "block";
+        label.style.marginBottom = "5px";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = apiKey;
+        input.style.width = "100%";
+        input.style.marginBottom = "10px";
+        input.placeholder = "Entrez votre clé API ici";
+
+        const saveButton = document.createElement("button");
+        saveButton.textContent = "Enregistrer";
+        saveButton.style.display = "block";
+
+        saveButton.onclick = () => {
+            const newKey = input.value.trim();
+            if (newKey) {
+                BdApi.Data.save(this.pluginName, "apiKey", newKey);
+                BdApi.showToast("Clé API enregistrée avec succès !", { type: "success" });
+            } else {
+                BdApi.showToast("La clé API est vide. Veuillez réessayer.", { type: "error" });
+            }
+        };
+
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        wrapper.appendChild(saveButton);
+
+        return wrapper;
     }
 };
